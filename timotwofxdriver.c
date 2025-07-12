@@ -69,6 +69,9 @@ static ssize_t timotwofx_read(struct file *file , char __user *to ,size_t count 
     if(count > dev->nbdatafromRead - *offset)
         count = dev->nbdatafromRead - *offset;
 
+    if (count > dev->nbdatafromRead)
+        count = dev->nbdatafromRead;
+
     copy_to_user(to,dev->dataRead,count);
     *offset += count; 
 	return count; 
@@ -101,8 +104,9 @@ static ssize_t timotwofx_write(struct file *file , const char __user *from , siz
     irq_flags = spi_w8r8(dev->spi,CMD);
     
     if (irq_flags < 0) {
-   
-        return irq_flags;
+        dev->dataRead[0] = irq_flags;
+        count = 0;
+        return -1;
     }
 
     irq_is_pending(dev);
@@ -110,6 +114,7 @@ static ssize_t timotwofx_write(struct file *file , const char __user *from , siz
 
 
     if (dev->nbdatatosend ==0){
+        // NOP command
         start = ktime_get();
         while((!gpiod_get_value(dev->irq_gpio)) && (!irq_is_pending(dev))){
             if (ktime_to_ms(ktime_sub(ktime_get(),start)) > 10)
@@ -138,11 +143,11 @@ static ssize_t timotwofx_write(struct file *file , const char __user *from , siz
 
     if (irq_flags & TIMO_SPI_DEVICE_BUSY_IRQ_MASK)
     {
-    gpiod_set_value(dev->cs_gpio,1);
-    dev->dataRead[0] = irq_flags;
-    dev->nbdatafromRead = 1;
-    count =1;
-    return count;
+        gpiod_set_value(dev->cs_gpio,1);
+        dev->dataRead[0] = irq_flags;
+        dev->nbdatafromRead = 1;
+        count = 0;
+        return -1;
     }
     spi_write_then_read(dev->spi,dev->dataSend,dev->nbdatatosend,&dev->dataRead[1],dev->nbdatatosend);
     gpiod_set_value(dev->cs_gpio,0);
