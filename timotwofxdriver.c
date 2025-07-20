@@ -279,6 +279,7 @@ static void timotwofx_remove(struct spi_device *spi){
         }
         
     }
+    device_count--;
     mutex_unlock(&device_list_lock);
 
    
