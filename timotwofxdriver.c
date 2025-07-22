@@ -308,6 +308,7 @@ static struct spi_driver my_spi_driver = {
 };
 
 module_spi_driver(my_spi_driver);
+MODULE_DEVICE_TABLE(of, my_spi_of_match);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Wissem Haj Mohamed");
